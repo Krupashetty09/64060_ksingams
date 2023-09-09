@@ -1,0 +1,93 @@
+---
+title: "ASSIGNMENT 1"
+author: "Krishna Krupa"
+date: "2023-09-09"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+#Downloading a Dataset 
+
+ https://www.kaggle.com/datasets/adityaab1407/employee-productivity-and-satisfaction-hr-data
+
+#Importing the Dataset into R
+
+```{r}
+employee = read.csv("hr_dashboard_data.csv", header = TRUE, sep = ",") 
+head(employee)
+
+```
+
+#Descriptive statistics of Quantitative variable
+
+Mean, Median, Min, Max and Standard deviation of Dataset
+
+```{r}
+summary(employee$Age)
+summary(employee$Projects_Completed)
+summary(employee$Productivity)
+summary(employee$Satisfaction_Rate_Per)
+summary(employee$Feedback_Score)
+```
+
+#Descriptive statistics of categorical variable
+
+1.Number of male and female in the Dataset
+
+```{r}
+ table(employee$Gender)
+```
+ 
+2.Proportion of each department in the Dataset
+
+ ```{r}
+count=table(employee$Department)
+ proportion= prop.table(count)
+ print(proportion)
+ ```
+
+#Transformation of Quantitative Variable
+
+converting the feedback values into percentage
+
+```{r}
+result= (employee$Feedback_Score/5)*100
+print(result)
+```
+
+#Plotting the variables
+
+1.Bar plot for number of departments in the Dataset
+
+```{r}
+x=table(employee$Department)
+print(x)
+
+barplot.default(x,names.arg = c('Finance','HR','IT', 'Marketing', 'Sales' ),
+                xlab= 'Departments', ylab = 'Number', ylim = c(0,50),main = 'Bar Graph',col = 'blue' )
+
+```
+
+2.Pie Chart for the number of positions in the data set
+
+```{r}
+x=table(employee$Position)
+
+ print(x)
+ 
+ pie(x, labels= names(x),radius = 1, clockwise = TRUE, main = 'Pie Chart' )
+```
+
+#Scatter plot for age and the number of projects completed in the Dataset 
+
+```{r}
+Age= employee$Age
+projects= employee$Projects_Completed
+plot(x = Age, y = projects, xlab='Age', ylab= 'No.of projects', xlim = c(0,100), ylim = c(0,50), main = 'scatterplot')
