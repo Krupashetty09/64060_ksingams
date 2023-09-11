@@ -3,8 +3,8 @@ title: "ASSIGNMENT 1"
 author: "Krishna Krupa"
 date: "2023-09-09"
 output:
-  word_document: default
   html_document: default
+  word_document: default
   pdf_document: default
 ---
 
