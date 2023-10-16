@@ -1,0 +1,255 @@
+---
+title: "FML_Assignment3"
+author: "Krishna Krupa Singamshetty"
+date: "2023-10-15"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem Statement
+
+The file accidentsFull.csv contains information on 42,183 actual automobile accidents in 2001 in the United States that involved one of three levels of injury: NO INJURY, INJURY, or FATALITY. For each accident, additional information is recorded, such as day of week, weather conditions, and road type. A firm might be interested in developing a system for quickly classifying the severity of an accident based on initial reports and associated data in the system (some of which rely on GPS-assisted reporting).
+
+Our goal here is to predict whether an accident just reported will involve an injury (MAX_SEV_IR = 1 or 2) or will not (MAX_SEV_IR = 0). For this purpose, create a dummy variable called INJURY that takes the value “yes” if MAX_SEV_IR = 1 or 2, and otherwise “no.”
+
+
+
+###Loading the required libraries
+```{r}
+library(e1071)
+library(caret)
+library(klaR)
+library(dplyr)
+```
+
+###Importing and reading the data
+```{r}
+accidents <- read.csv("C:/Users/Krupa shetty/Downloads/accidentsFull.csv")
+
+###Creating a new coulmn INJURY to classify MAX_SEV_IR, if MAX_SEV_IR is greater than 0, then injury is yes and if it is less than 0, then injury is no
+accidents$INJURY = ifelse(accidents$MAX_SEV_IR>0,"yes","no")
+head(accidents)
+
+
+# Convert variables to factor
+for (i in c(1:dim(accidents)[2])){
+  accidents[,i] <- as.factor(accidents[,i])
+}
+head(accidents,n=24)
+```
+
+1. Using the information in this dataset, if an accident has just been reported and no further information is available, what should the prediction be? (INJURY = Yes or No?) Why?
+
+It is not possible to predict if there would be any injury or not when an accident is reported with no sufficient information, but by using dataset that is historic data, we can say that if the probability of getting injured is greater than probability of not getting injured, then we can say that there are more chances to get injured whereas if probability of not getting injured is greater than probability of getting injured, then we can say that there is less likely chances that accident has a injury.
+
+```{r}
+###probability of injury is yes
+yes <- accidents%>% filter(accidents$INJURY=="yes")%>%summarise(count= n())
+yes
+is_yes<-  yes/nrow(accidents)
+is_yes
+```
+
+```{r}
+No <- accidents%>% filter(accidents$INJURY=="no")%>%summarise(count= n())
+No
+is_no<-  yes/nrow(accidents)
+is_no
+```
+Therefore, the probability of getting injury is 0.5087832	 which is greater than probability og not getting injured 0.4912168, so we can say that if any accident is reported we can assume that there is an injury.
+
+
+2. Select the first 24 records in the dataset and look only at the response (INJURY) and the two predictors WEATHER_R and TRAF_CON_R. Create a pivot table that examines INJURY as a function of the two predictors for these 12 records. Use all three variables in the pivot table as rows/columns.
+  ->Compute the exact Bayes conditional probabilities of an injury (INJURY = Yes) given the six possible combinations of the predictors.
+  
+```{r}
+accidents24 = accidents[1:24,c("INJURY","WEATHER_R","TRAF_CON_R")]
+
+```
+```{r}
+dt1 = ftable(accidents24)
+dt1
+dt2 = ftable(accidents24[,-1]) # print table only for conditions
+dt2
+```
+```{r}
+# Injury = yes
+p1 = dt1[3,1] / dt2[1,1] # Injury, Weather=1 and Traf=0
+p2 = dt1[4,1] / dt2[2,1] # Injury, Weather=2, Traf=0
+p3 = dt1[3,2] / dt2[1,2] # Injury, W=1, T=1
+p4 = dt1[4,2] / dt2[2,2] # I, W=2,T=1
+p5 = dt1[3,3] / dt2[1,3] # I, W=1,T=2
+p6 = dt1[4,3]/ dt2[2,3] #I,W=2,T=2
+
+# Injury = no
+n1 = dt1[1,1] / dt2[1,1] # Weather=1 and Traf=0
+n2 = dt1[2,1] / dt2[2,1] # Weather=2, Traf=0
+n3 = dt1[1,2] / dt2[1,2] # W=1, T=1
+n4 = dt1[2,2] / dt2[2,2] # W=2,T=1
+n5 = dt1[1,3] / dt2[1,3] # W=1,T=2
+n6 = dt1[2,3] / dt2[2,3] # W=2,T=2
+print(c(p1,p2,p3,p4,p5,p6))
+print(c(n1,n2,n3,n4,n5,n6))
+```
+#therefore, the conditional probabilities for 6 predictors are
+1.Probability of Injury= yes given Weather = 1 and Traffic = 0 is 0.6666667
+2.Probability of Injury= yes given Weather = 1 and Traffic = 1 is 0.0000000
+3.Probability of Injury= yes given Weather = 1 and Traffic = 2 is 0.0000000
+4.Probability of Injury= yes given Weather = 2 and Traffic = 0 is 0.1818182
+5.Probability of Injury= yes given Weather = 2 and Traffic = 1 is 0.0000000
+6.Probability of Injury= yes given Weather = 2 and Traffic = 2 is 1.0000000
+7.Probability of Injury= no given Weather = 1 and Traffic  = 0 is 0.3333333
+8.Probability of Injury= no given Weather = 1 and Traffic  = 1 is 1.0000000
+9.Probability of Injury= no given Weather = 1 and Traffic  = 2 is 1.0000000
+10.Probability of Injury= no given Weather = 2 and Traffic = 0 is 0.8181818
+11.Probability of Injury= no given Weather = 2 and Traffic = 1 is 1.0000000
+12.Probability of Injury= no given Weather = 2 and Traffic = 2 is 0.0000000
+
+
+ -> Classify the 24 accidents using these probabilities and a cutoff of 0.5.
+```{r}
+# Define a vector to store the classification results
+classification_results <- character(24)
+
+# Assign classifications based on the probabilities and a cutoff of 0.5
+for (i in 1:24) {
+    if (accidents24$WEATHER_R[i] == "1") {
+        if (accidents24$TRAF_CON_R[i] == "0") {
+            classification_results[i] = ifelse(p1 > 0.5, "Yes", "No")
+        } else if (accidents24$TRAF_CON_R[i] == "1") {
+            classification_results[i] = ifelse(p3 > 0.5, "Yes", "No")
+        } else {
+            classification_results[i] = ifelse(p5 > 0.5, "Yes", "No")
+        }
+    } else {
+        if (accidents24$TRAF_CON_R[i] == "0") {
+            classification_results[i] = ifelse(p2 > 0.5, "Yes", "No")
+        } else if (accidents24$TRAF_CON_R[i] == "1") {
+            classification_results[i] = ifelse(p4 > 0.5, "Yes", "No")
+        } else {
+            classification_results[i] = ifelse(p6 > 0.5, "Yes", "No")
+        }
+    }
+}
+
+# Print the classification results
+cat("Classification Results based on Exact Bayes:\n")
+cat(classification_results, sep = " ")
+```
+
+-> Compute manually the naive Bayes conditional probability of an injury given WEATHER_R = 1 and TRAF_CON_R = 1.
+```{r}
+
+data_x = accidents24[accidents24$WEATHER_R == "1" & accidents24$TRAF_CON_R == "1", ]
+
+pro_yes = sum(data_x$INJURY == "yes") / nrow(data_x)
+
+pro_yes
+
+#The probability of injury =yes and WEATHER_R = 1 and TRAF_CON_R = 1 is 0. This means the model is esimating probability of zero for weather is 1 and traffic is 1.
+```
+```{r}
+
+data_1 = data.frame(WEATHER_R = "1", TRAF_CON_R = "1")
+
+naive_bayes_pred = naiveBayes(INJURY ~ WEATHER_R + TRAF_CON_R, data = accidents24)
+
+prediction = predict(naive_bayes_pred, newdata =data_1, type = "raw")
+
+prediction
+
+#Therefore, the probability of injury is yes is 0.008919722 and for injury is no is 0.9910803 for the given combination of WEATHER_R and TRAF_CON_R (WEATHER_R = 1 and TRAF_CON_R = 1) 
+
+```
+
+-> Run a naive Bayes classifier on the 24 records and two predictors. Check the model output to obtain probabilities and classifications for all 24 records. Compare this to the exact Bayes classification. Are the resulting classifications equivalent? Is the ranking (= ordering) of observations equivalent?
+
+```{r}
+Tnaive_bayes= naiveBayes(INJURY ~ TRAF_CON_R + WEATHER_R, 
+                 data = accidents24)
+
+pred_nb = predict(Tnaive_bayes, newdata = accidents24)
+# accidents24$nbpred.prob = nbt[,2] # Transfer the "Yes" nb prediction
+pred_nb
+
+```
+```{r}
+
+cutoff = 0.5
+
+exact_bayes = ifelse(c(p1, p2, p3, p4, p5, p6) > cutoff, "yes", "no")
+
+result = data.frame(
+  "Exact_Bayes" = exact_bayes,
+  "Naive_Bayes_Probability" = pred_nb
+
+)
+
+classifications = exact_bayes == pred_nb
+
+ranking = order(-as.numeric(c(p1, p2, p3, p4, p5, p6))) == order(-as.numeric(pred_nb))
+
+cat("Are the resulting classifications equivalent? ", all(classifications), "\n")
+cat("Is the ranking of observations equivalent? ", all(ranking), "\n")
+
+
+```
+The result of exact bayes classification and naive bayes doesnt match for all the data and the order that is ranking is also not equivalent for exact bayes and naive bayes. This means that even if both methods are similar, there is difference in their result. This might be because of the dataset and their variables.
+
+3. Let us now return to the entire dataset. Partition the data into training (60%) and validation (40%). 
+  + Run a naive Bayes classifier on the complete training set with the relevant predictors (and INJURY as the response). Note that all predictors are categorical. Show the confusion matrix.
+  + What is the overall error of the validation set?
+  
+```{r}
+#Setting the seed as to get the same result everytime
+set.seed(123)
+
+#read the data
+accidents_new = read.csv("C:/Users/Krupa shetty/Downloads/accidentsFull.csv")
+
+accidents_new$INJURY = ifelse(accidents_new$MAX_SEV_IR>0,1,0)
+
+for (i in c(1:dim(accidents_new)[2])){
+  accidents[,i] = as.factor(accidents_new[,i])
+}
+
+
+# index_split = createDataPartition(accidents_new$INJURY, p = 0.6, list = FALSE)
+# 
+# train_data = accidents_new[index_split, ]
+# 
+# validation_data = accidents_new[-index_split, ]
+
+#splitting the data
+t_split = sample(row.names(accidents_new), 0.6*dim(accidents_new)[1])
+
+v_split = setdiff(row.names(accidents_new), t_split)  
+
+T_data = accidents_new[t_split,]
+
+V_data = accidents_new[v_split,]
+
+#naive bayes
+naive_model = naiveBayes(INJURY ~ ., data = T_data)
+
+naive_predictions = predict(naive_model, V_data)
+
+
+##confusion matrix
+confusion_matrix_nb = confusionMatrix(naive_predictions, as.factor(V_data$INJURY))
+
+print(confusion_matrix_nb)
+
+## Total error that is overall error
+Total_error = 1 - confusion_matrix_nb$overall["Accuracy"]
+
+Total_error
+
+#The total error is 0.008652365 which ia almost equal to zero , the model performs good in case of predicting. The model has high accuracy, sensitivity and specificity.
+```
