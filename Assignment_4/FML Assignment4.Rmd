@@ -4,8 +4,8 @@ author: "krupa"
 date: "2023-11-12"
 output:
   word_document: default
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -253,6 +253,10 @@ ggplot(clust_pharma, mapping = aes(factor(Clusters),fill = Exchange))+geom_bar(p
 ***Location:*** Cluster 5 has two locations, with the US outnumbering the UK by a large margin.
 
 ***Exchange:*** Cluster 5 only has one exchange, which is NYSE.
+
+**Summary**
+There is a trend in the median recommendations and
+There doesn't seem to be any discernable pattern among the clusters, locations, or exchanges other than the fact that the majority of the clusters/companies are listed on the NYSE and situated in the United States.
 
 
 3.Provide an appropriate name for each cluster using any or all of the variables in the dataset.
